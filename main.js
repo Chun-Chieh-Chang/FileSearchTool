@@ -33,7 +33,7 @@ class WebFileSearchTool {
             const ext = file.name.split('.').pop().toLowerCase();
             return ['xlsx', 'xls', 'pdf'].includes(ext);
         });
-        
+
         document.getElementById('fileStats').innerText = `已選擇 ${this.selectedFiles.length} 個符合的檔案`;
     }
 
@@ -60,7 +60,7 @@ class WebFileSearchTool {
         this.results = [];
         const tableBody = document.querySelector('#resultsTable tbody');
         tableBody.innerHTML = '';
-        
+
         const progressSection = document.getElementById('progressSection');
         const progressBar = document.getElementById('progressBar');
         const progressLabel = document.getElementById('progressLabel');
@@ -79,7 +79,7 @@ class WebFileSearchTool {
             if (this.stopSearchFlag) break;
 
             const ext = file.name.split('.').pop().toLowerCase();
-            
+
             // Filter by type
             if (typeFilter === 'Excel' && !['xlsx', 'xls'].includes(ext)) {
                 processedCount++;
@@ -91,11 +91,11 @@ class WebFileSearchTool {
             }
 
             statusLabel.innerText = `正在處理: ${file.name}`;
-            
+
             try {
                 const matchData = await this.searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive);
                 if (matchData.isMatch) {
-                    this.addResultToTable(file.name, matchData.totalCount, matchData.type, matchData.location);
+                    this.addResultToTable(file, matchData.totalCount, matchData.type, matchData.location);
                 }
             } catch (err) {
                 console.error(`Error processing ${file.name}:`, err);
@@ -126,7 +126,7 @@ class WebFileSearchTool {
             matchData.type = 'Excel';
             const data = await file.arrayBuffer();
             const workbook = XLSX.read(data, { type: 'array' });
-            
+
             let kw1Found = false;
             let kw2Found = false;
             let kw1Count = 0;
@@ -136,7 +136,7 @@ class WebFileSearchTool {
             for (const sheetName of workbook.SheetNames) {
                 const sheet = workbook.Sheets[sheetName];
                 const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-                
+
                 rows.forEach((row, rIdx) => {
                     row.forEach((cell, cIdx) => {
                         const cellStr = String(cell);
@@ -146,7 +146,7 @@ class WebFileSearchTool {
                             kw1Count += m1;
                             if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
                         }
-                        
+
                         if (kw2) {
                             const m2 = this.countMatches(cellStr, kw2, wholeWord, caseSensitive);
                             if (m2 > 0) {
@@ -167,7 +167,7 @@ class WebFileSearchTool {
             matchData.type = 'PDF';
             const data = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data }).promise;
-            
+
             let kw1Found = false;
             let kw2Found = false;
             let kw1Count = 0;
@@ -178,7 +178,7 @@ class WebFileSearchTool {
                 const page = await pdf.getPage(i);
                 const textDetail = await page.getTextContent();
                 const pageText = textDetail.items.map(item => item.str).join(' ');
-                
+
                 const m1 = this.countMatches(pageText, kw1, wholeWord, caseSensitive);
                 if (m1 > 0) {
                     kw1Found = true;
@@ -208,12 +208,12 @@ class WebFileSearchTool {
         if (!keyword) return 0;
         let flags = 'g';
         if (!caseSensitive) flags += 'i';
-        
+
         let pattern = this.escapeRegExp(keyword);
         if (wholeWord) {
             pattern = `\\b${pattern}\\b`;
         }
-        
+
         const regex = new RegExp(pattern, flags);
         const matches = text.match(regex);
         return matches ? matches.length : 0;
@@ -238,15 +238,38 @@ class WebFileSearchTool {
         return letter;
     }
 
-    addResultToTable(name, count, type, location) {
+    addResultToTable(file, count, type, location) {
         const tbody = document.querySelector('#resultsTable tbody');
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="highlight-row">${name}</td>
+            <td class="highlight-row">${file.name}</td>
             <td>${count}</td>
             <td><span class="version-tag">${type}</span></td>
             <td style="font-size: 0.8rem; color: #94a3b8;">${location}</td>
         `;
+
+        // Add click event to open file
+        row.addEventListener('click', () => {
+            const url = URL.createObjectURL(file);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.name; // For Excel, this triggers download
+            a.target = '_blank';    // For PDF, this might open in new tab
+
+            // For PDFs, we prefer opening to downloading if supported
+            if (file.type === 'application/pdf') {
+                window.open(url, '_blank');
+            } else {
+                // For Excel and others, trigger download link
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
+            // Revoke URL after a delay to free memory
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        });
+
         tbody.appendChild(row);
     }
 }

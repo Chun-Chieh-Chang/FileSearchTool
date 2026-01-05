@@ -248,26 +248,27 @@ class WebFileSearchTool {
             <td style="font-size: 0.8rem; color: #94a3b8;">${location}</td>
         `;
 
-        // Add click event to open file
+        // Add click event to open/download file
         row.addEventListener('click', () => {
-            const url = URL.createObjectURL(file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name; // For Excel, this triggers download
-            a.target = '_blank';    // For PDF, this might open in new tab
+            try {
+                const url = URL.createObjectURL(file);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                a.style.display = 'none';
 
-            // For PDFs, we prefer opening to downloading if supported
-            if (file.type === 'application/pdf') {
-                window.open(url, '_blank');
-            } else {
-                // For Excel and others, trigger download link
                 document.body.appendChild(a);
                 a.click();
-                document.body.removeChild(a);
-            }
 
-            // Revoke URL after a delay to free memory
-            setTimeout(() => URL.revokeObjectURL(url), 100);
+                // Keep the URL alive for 1 second instead of 100ms
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 1000);
+            } catch (err) {
+                console.error("無法開啟檔案:", err);
+                alert("無法開啟該檔案，請檢查瀏覽器設定。");
+            }
         });
 
         tbody.appendChild(row);

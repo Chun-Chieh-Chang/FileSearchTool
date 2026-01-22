@@ -98,50 +98,60 @@ class WebFileSearchTool {
         let successCount = 0;
         let errorCount = 0;
 
-        for (const file of this.selectedFiles) {
+        const CONCURRENCY = 4;
+        const filesToProcess = this.selectedFiles.filter(file => {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (typeFilter === 'Excel') return ['xlsx', 'xls'].includes(ext);
+            if (typeFilter === 'PDF') return ext === 'pdf';
+            return ['xlsx', 'xls', 'pdf'].includes(ext);
+        });
+
+        const validTotalFiles = filesToProcess.length;
+
+        for (let i = 0; i < validTotalFiles; i += CONCURRENCY) {
             if (this.stopSearchFlag) break;
 
-            const ext = file.name.split('.').pop().toLowerCase();
-
-            if (typeFilter === 'Excel' && !['xlsx', 'xls'].includes(ext)) {
-                processedCount++;
-                continue;
-            }
-            if (typeFilter === 'PDF' && ext !== 'pdf') {
-                processedCount++;
-                continue;
-            }
-
-            statusLabel.innerText = `正在處理: ${file.name}`;
-
-            try {
-                const matchData = await Promise.race([
+            const batch = filesToProcess.slice(i, i + CONCURRENCY);
+            const batchPromises = batch.map(file => 
+                Promise.race([
                     this.searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive),
                     new Promise((_, reject) => 
                         setTimeout(() => reject(new Error('處理逾時')), 30000)
                     )
-                ]);
+                ]).then(matchData => ({ success: true, data: matchData, file }))
+                 .catch(err => ({ success: false, error: err, file }))
+            );
 
-                if (matchData.isMatch) {
-                    this.addResultToTable(file, matchData.totalCount, matchData.type, matchData.location);
+            const results = await Promise.allSettled(batchPromises);
+
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    const { success, data, error, file } = result.value;
+                    
+                    if (success) {
+                        statusLabel.innerText = `正在處理: ${file.name}`;
+                        if (data.isMatch) {
+                            this.addResultToTable(file, data.totalCount, data.type, data.location);
+                        }
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        this.errorFiles.push({ name: file.name, error: error.message });
+                        console.error(`Error processing ${file.name}:`, error);
+                        statusLabel.innerText = `錯誤: ${file.name}`;
+                    }
                 }
-                successCount++;
-            } catch (err) {
-                errorCount++;
-                this.errorFiles.push({ name: file.name, error: err.message });
-                console.error(`Error processing ${file.name}:`, err);
-                statusLabel.innerText = `錯誤: ${file.name}`;
-            }
-
-            processedCount++;
-            const percent = Math.round((processedCount / totalFiles) * 100);
-            progressBar.style.width = `${percent}%`;
-            progressLabel.innerText = `進度: ${percent}% (${processedCount}/${totalFiles})`;
-
-            if (processedCount % 5 === 0) {
-                await new Promise(resolve => setTimeout(resolve, 1));
+                processedCount++;
+                const percent = Math.round((processedCount / validTotalFiles) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressLabel.innerText = `進度: ${percent}% (${processedCount}/${validTotalFiles})`;
             }
         }
+
+        processedCount = this.selectedFiles.length - validTotalFiles + processedCount;
+        const finalPercent = Math.round((processedCount / totalFiles) * 100);
+        progressBar.style.width = `${finalPercent}%`;
+        progressLabel.innerText = `進度: ${finalPercent}% (${processedCount}/${totalFiles})`;
 
         let finalMessage = this.stopSearchFlag ? '搜尋已停止' : '搜尋完成';
         if (errorCount > 0) {
@@ -263,7 +273,10 @@ class WebFileSearchTool {
                         const sheet = workbook.Sheets[sheetName];
                         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
+                        let shouldExitSheet = false;
                         for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+                            if (shouldExitSheet) break;
+
                             const row = rows[rIdx];
                             for (let cIdx = 0; cIdx < row.length; cIdx++) {
                                 const cell = row[cIdx];
@@ -285,6 +298,11 @@ class WebFileSearchTool {
                                             kw2Count += m2;
                                             if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
                                         }
+                                    }
+
+                                    if (this.checkLogic(kw1Found, kw2Found, kw2, logic) && kw1Found && (!kw2 || kw2Found)) {
+                                        shouldExitSheet = true;
+                                        break;
                                     }
                                 } catch (cellErr) {
                                     console.warn(`Error in cell ${rIdx},${cIdx}:`, cellErr);
@@ -331,6 +349,10 @@ class WebFileSearchTool {
                 try {
                     const maxPages = Math.min(pdf.numPages, 500);
                     for (let i = 1; i <= maxPages; i++) {
+                        if (this.checkLogic(kw1Found, kw2Found, kw2, logic) && kw1Found && (!kw2 || kw2Found)) {
+                            break;
+                        }
+
                         let page;
                         try {
                             page = await pdf.getPage(i);
@@ -391,15 +413,26 @@ class WebFileSearchTool {
 
     countMatches(text, keyword, wholeWord, caseSensitive) {
         if (!keyword) return 0;
-        let flags = 'g';
-        if (!caseSensitive) flags += 'i';
+        const cacheKey = `${keyword}-${wholeWord}-${caseSensitive}`;
 
-        let pattern = this.escapeRegExp(keyword);
-        if (wholeWord) {
-            pattern = `\\b${pattern}\\b`;
+        if (!this.regexCache) {
+            this.regexCache = new Map();
         }
 
-        const regex = new RegExp(pattern, flags);
+        let regex = this.regexCache.get(cacheKey);
+        if (!regex) {
+            let flags = 'g';
+            if (!caseSensitive) flags += 'i';
+
+            let pattern = this.escapeRegExp(keyword);
+            if (wholeWord) {
+                pattern = `\\b${pattern}\\b`;
+            }
+
+            regex = new RegExp(pattern, flags);
+            this.regexCache.set(cacheKey, regex);
+        }
+
         const matches = text.match(regex);
         return matches ? matches.length : 0;
     }
@@ -465,13 +498,19 @@ class WebFileSearchTool {
             selectedFiles: this.selectedFiles.length,
             resultFiles: this.resultFiles.length,
             results: this.results.length,
-            blobUrls: this.blobUrls.length
+            blobUrls: this.blobUrls.length,
+            regexCache: this.regexCache ? this.regexCache.size : 0
         };
 
         this.selectedFiles = [];
         this.resultFiles = [];
         this.results = [];
         this.errorFiles = [];
+
+        if (this.regexCache) {
+            this.regexCache.clear();
+            this.regexCache = null;
+        }
 
         this.blobUrls.forEach(url => {
             try {
@@ -500,7 +539,8 @@ class WebFileSearchTool {
             selectedFiles: this.selectedFiles.length,
             resultFiles: this.resultFiles.length,
             results: this.results.length,
-            blobUrls: this.blobUrls.length
+            blobUrls: this.blobUrls.length,
+            regexCache: 0
         };
 
         console.log('Memory cleared:', { before: beforeCount, after: afterCount });

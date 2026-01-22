@@ -324,6 +324,18 @@ main {
     box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
 }
 
+.btn-success {
+    background: var(--accent-green);
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+}
+
 .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);

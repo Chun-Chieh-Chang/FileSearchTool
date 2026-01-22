@@ -11,6 +11,7 @@ class WebFileSearchTool {
         this.selectedFiles = [];
         this.stopSearchFlag = false;
         this.results = [];
+        this.resultFiles = [];
         this.initEventListeners();
     }
 
@@ -19,11 +20,13 @@ class WebFileSearchTool {
         const fileInput = document.getElementById('fileInput');
         const startBtn = document.getElementById('startSearch');
         const stopBtn = document.getElementById('stopSearch');
+        const saveBtn = document.getElementById('saveFiles');
 
         folderInput.addEventListener('change', (e) => this.handleFileSelection(e));
         fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
         startBtn.addEventListener('click', () => this.startSearch());
         stopBtn.addEventListener('click', () => this.stopSearch());
+        saveBtn.addEventListener('click', () => this.saveFilesToFolder());
     }
 
     handleFileSelection(event) {
@@ -70,6 +73,7 @@ class WebFileSearchTool {
         // Reset UI
         this.stopSearchFlag = false;
         this.results = [];
+        this.resultFiles = [];
         const tableBody = document.querySelector('#resultsTable tbody');
         tableBody.innerHTML = '';
 
@@ -79,10 +83,12 @@ class WebFileSearchTool {
         const statusLabel = document.getElementById('statusLabel');
         const startBtn = document.getElementById('startSearch');
         const stopBtn = document.getElementById('stopSearch');
+        const saveBtn = document.getElementById('saveFiles');
 
         progressSection.style.display = 'block';
         startBtn.disabled = true;
         stopBtn.disabled = false;
+        saveBtn.disabled = true;
 
         let processedCount = 0;
         const totalFiles = this.selectedFiles.length;
@@ -122,10 +128,74 @@ class WebFileSearchTool {
         statusLabel.innerText = this.stopSearchFlag ? '搜尋已停止' : '搜尋完成';
         startBtn.disabled = false;
         stopBtn.disabled = true;
+        saveBtn.disabled = this.resultFiles.length === 0;
     }
 
     stopSearch() {
         this.stopSearchFlag = true;
+    }
+
+    async saveFilesToFolder() {
+        if (this.resultFiles.length === 0) {
+            alert('沒有可另存的檔案');
+            return;
+        }
+
+        if (!window.showDirectoryPicker) {
+            this.fallbackDownload();
+            return;
+        }
+
+        try {
+            const dirHandle = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                startIn: 'downloads'
+            });
+
+            let savedCount = 0;
+            for (const file of this.resultFiles) {
+                try {
+                    const fileHandle = await dirHandle.getFileHandle(file.name, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(file);
+                    await writable.close();
+                    savedCount++;
+                } catch (err) {
+                    console.error(`無法儲存 ${file.name}:`, err);
+                }
+            }
+
+            alert(`成功將 ${savedCount} / ${this.resultFiles.length} 個檔案另存到選擇的資料夾`);
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                return;
+            }
+            console.error('儲存檔案時發生錯誤:', err);
+            this.fallbackDownload();
+        }
+    }
+
+    fallbackDownload() {
+        if (confirm('您的瀏覽器不支援資料夾選擇功能，是否改用逐個下載方式？')) {
+            let delay = 0;
+            this.resultFiles.forEach((file, index) => {
+                setTimeout(() => {
+                    const url = URL.createObjectURL(file);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file.name;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 500);
+                }, delay);
+                delay += 300;
+            });
+            alert(`將開始下載 ${this.resultFiles.length} 個檔案，請允許瀏覽器的多檔案下載`);
+        }
     }
 
     async searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive) {
@@ -284,6 +354,7 @@ class WebFileSearchTool {
         });
 
         tbody.appendChild(row);
+        this.resultFiles.push(file);
     }
 }
 

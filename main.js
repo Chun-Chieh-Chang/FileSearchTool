@@ -70,10 +70,10 @@ class WebFileSearchTool {
             return;
         }
 
-        // Reset UI
         this.stopSearchFlag = false;
         this.results = [];
         this.resultFiles = [];
+        this.errorFiles = [];
         const tableBody = document.querySelector('#resultsTable tbody');
         tableBody.innerHTML = '';
 
@@ -92,13 +92,14 @@ class WebFileSearchTool {
 
         let processedCount = 0;
         const totalFiles = this.selectedFiles.length;
+        let successCount = 0;
+        let errorCount = 0;
 
         for (const file of this.selectedFiles) {
             if (this.stopSearchFlag) break;
 
             const ext = file.name.split('.').pop().toLowerCase();
 
-            // Filter by type
             if (typeFilter === 'Excel' && !['xlsx', 'xls'].includes(ext)) {
                 processedCount++;
                 continue;
@@ -111,21 +112,45 @@ class WebFileSearchTool {
             statusLabel.innerText = `正在處理: ${file.name}`;
 
             try {
-                const matchData = await this.searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive);
+                const matchData = await Promise.race([
+                    this.searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('處理逾時')), 30000)
+                    )
+                ]);
+
                 if (matchData.isMatch) {
                     this.addResultToTable(file, matchData.totalCount, matchData.type, matchData.location);
                 }
+                successCount++;
             } catch (err) {
+                errorCount++;
+                this.errorFiles.push({ name: file.name, error: err.message });
                 console.error(`Error processing ${file.name}:`, err);
+                statusLabel.innerText = `錯誤: ${file.name}`;
             }
 
             processedCount++;
             const percent = Math.round((processedCount / totalFiles) * 100);
             progressBar.style.width = `${percent}%`;
             progressLabel.innerText = `進度: ${percent}% (${processedCount}/${totalFiles})`;
+
+            if (processedCount % 5 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
         }
 
-        statusLabel.innerText = this.stopSearchFlag ? '搜尋已停止' : '搜尋完成';
+        let finalMessage = this.stopSearchFlag ? '搜尋已停止' : '搜尋完成';
+        if (errorCount > 0) {
+            finalMessage += ` (成功: ${successCount}, 錯誤: ${errorCount})`;
+            if (errorCount <= 5) {
+                const errorList = this.errorFiles.map(e => `${e.name}: ${e.error}`).join('\n');
+                setTimeout(() => alert(`以下檔案處理失敗：\n\n${errorList}`), 500);
+            } else {
+                setTimeout(() => alert(`${errorCount} 個檔案處理失敗，請查看主控台了解詳情`), 500);
+            }
+        }
+        statusLabel.innerText = finalMessage;
         startBtn.disabled = false;
         stopBtn.disabled = true;
         saveBtn.disabled = this.resultFiles.length === 0;
@@ -200,87 +225,162 @@ class WebFileSearchTool {
 
     async searchInFile(file, kw1, kw2, logic, wholeWord, caseSensitive) {
         const ext = file.name.split('.').pop().toLowerCase();
-        let textContent = '';
-        let location = '內容中';
         let matchData = { isMatch: false, totalCount: 0, type: '', location: '' };
 
-        if (['xlsx', 'xls'].includes(ext)) {
-            matchData.type = 'Excel';
-            const data = await file.arrayBuffer();
-            const workbook = XLSX.read(data, { type: 'array' });
+        try {
+            if (['xlsx', 'xls'].includes(ext)) {
+                matchData.type = 'Excel';
 
-            let kw1Found = false;
-            let kw2Found = false;
-            let kw1Count = 0;
-            let kw2Count = 0;
-            let firstLoc = '';
+                if (file.size > 50 * 1024 * 1024) {
+                    throw new Error('檔案過大 (超過 50MB)，無法處理');
+                }
 
-            for (const sheetName of workbook.SheetNames) {
-                const sheet = workbook.Sheets[sheetName];
-                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                let data;
+                try {
+                    data = await file.arrayBuffer();
+                } catch (e) {
+                    throw new Error('無法讀取檔案內容');
+                }
 
-                rows.forEach((row, rIdx) => {
-                    row.forEach((cell, cIdx) => {
-                        const cellStr = String(cell);
-                        const m1 = this.countMatches(cellStr, kw1, wholeWord, caseSensitive);
-                        if (m1 > 0) {
-                            kw1Found = true;
-                            kw1Count += m1;
-                            if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
-                        }
+                let workbook;
+                try {
+                    workbook = XLSX.read(data, { type: 'array' });
+                } catch (e) {
+                    throw new Error('檔案格式錯誤或已損壞');
+                }
 
-                        if (kw2) {
-                            const m2 = this.countMatches(cellStr, kw2, wholeWord, caseSensitive);
-                            if (m2 > 0) {
-                                kw2Found = true;
-                                kw2Count += m2;
-                                if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
+                let kw1Found = false;
+                let kw2Found = false;
+                let kw1Count = 0;
+                let kw2Count = 0;
+                let firstLoc = '';
+
+                try {
+                    for (const sheetName of workbook.SheetNames) {
+                        const sheet = workbook.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                        for (let rIdx = 0; rIdx < rows.length; rIdx++) {
+                            const row = rows[rIdx];
+                            for (let cIdx = 0; cIdx < row.length; cIdx++) {
+                                const cell = row[cIdx];
+                                if (cell === null || cell === undefined) continue;
+
+                                try {
+                                    const cellStr = String(cell);
+                                    const m1 = this.countMatches(cellStr, kw1, wholeWord, caseSensitive);
+                                    if (m1 > 0) {
+                                        kw1Found = true;
+                                        kw1Count += m1;
+                                        if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
+                                    }
+
+                                    if (kw2) {
+                                        const m2 = this.countMatches(cellStr, kw2, wholeWord, caseSensitive);
+                                        if (m2 > 0) {
+                                            kw2Found = true;
+                                            kw2Count += m2;
+                                            if (!firstLoc) firstLoc = `Sheet: ${sheetName}, Cell: ${this.getColLetter(cIdx)}${rIdx + 1}`;
+                                        }
+                                    }
+                                } catch (cellErr) {
+                                    console.warn(`Error in cell ${rIdx},${cIdx}:`, cellErr);
+                                }
                             }
                         }
-                    });
-                });
-            }
-
-            matchData.isMatch = this.checkLogic(kw1Found, kw2Found, kw2, logic);
-            matchData.totalCount = kw1Count + kw2Count;
-            matchData.location = firstLoc || '未知位置';
-
-        } else if (ext === 'pdf') {
-            matchData.type = 'PDF';
-            const data = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data }).promise;
-
-            let kw1Found = false;
-            let kw2Found = false;
-            let kw1Count = 0;
-            let kw2Count = 0;
-            let firstLoc = '';
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textDetail = await page.getTextContent();
-                const pageText = textDetail.items.map(item => item.str).join(' ');
-
-                const m1 = this.countMatches(pageText, kw1, wholeWord, caseSensitive);
-                if (m1 > 0) {
-                    kw1Found = true;
-                    kw1Count += m1;
-                    if (!firstLoc) firstLoc = `Page ${i}`;
+                    }
+                } catch (sheetErr) {
+                    throw new Error(`工作表處理錯誤: ${sheetErr.message}`);
                 }
 
-                if (kw2) {
-                    const m2 = this.countMatches(pageText, kw2, wholeWord, caseSensitive);
-                    if (m2 > 0) {
-                        kw2Found = true;
-                        kw2Count += m2;
-                        if (!firstLoc) firstLoc = `Page ${i}`;
+                matchData.isMatch = this.checkLogic(kw1Found, kw2Found, kw2, logic);
+                matchData.totalCount = kw1Count + kw2Count;
+                matchData.location = firstLoc || '未知位置';
+
+            } else if (ext === 'pdf') {
+                matchData.type = 'PDF';
+
+                if (file.size > 100 * 1024 * 1024) {
+                    throw new Error('檔案過大 (超過 100MB)，無法處理');
+                }
+
+                let data;
+                try {
+                    data = await file.arrayBuffer();
+                } catch (e) {
+                    throw new Error('無法讀取檔案內容');
+                }
+
+                let pdf;
+                try {
+                    const loadingTask = pdfjsLib.getDocument({ data });
+                    pdf = await loadingTask.promise;
+                } catch (e) {
+                    throw new Error('PDF 檔案格式錯誤或已損壞');
+                }
+
+                let kw1Found = false;
+                let kw2Found = false;
+                let kw1Count = 0;
+                let kw2Count = 0;
+                let firstLoc = '';
+
+                try {
+                    const maxPages = Math.min(pdf.numPages, 500);
+                    for (let i = 1; i <= maxPages; i++) {
+                        let page;
+                        try {
+                            page = await pdf.getPage(i);
+                        } catch (pageErr) {
+                            console.warn(`Error loading page ${i}:`, pageErr);
+                            continue;
+                        }
+
+                        try {
+                            const textDetail = await page.getTextContent();
+                            const pageText = textDetail.items.map(item => item.str).join(' ');
+
+                            const m1 = this.countMatches(pageText, kw1, wholeWord, caseSensitive);
+                            if (m1 > 0) {
+                                kw1Found = true;
+                                kw1Count += m1;
+                                if (!firstLoc) firstLoc = `Page ${i}`;
+                            }
+
+                            if (kw2) {
+                                const m2 = this.countMatches(pageText, kw2, wholeWord, caseSensitive);
+                                if (m2 > 0) {
+                                    kw2Found = true;
+                                    kw2Count += m2;
+                                    if (!firstLoc) firstLoc = `Page ${i}`;
+                                }
+                            }
+                        } catch (textErr) {
+                            console.warn(`Error reading text from page ${i}:`, textErr);
+                        }
+
+                        page.cleanup();
+                    }
+
+                    if (pdf.numPages > 500) {
+                        console.warn(`PDF has ${pdf.numPages} pages, only first 500 were searched`);
+                    }
+                } catch (pageErr) {
+                    throw new Error(`頁面處理錯誤: ${pageErr.message}`);
+                } finally {
+                    try {
+                        pdf.destroy();
+                    } catch (e) {
+                        console.warn('Error destroying PDF:', e);
                     }
                 }
-            }
 
-            matchData.isMatch = this.checkLogic(kw1Found, kw2Found, kw2, logic);
-            matchData.totalCount = kw1Count + kw2Count;
-            matchData.location = firstLoc || '未知位置';
+                matchData.isMatch = this.checkLogic(kw1Found, kw2Found, kw2, logic);
+                matchData.totalCount = kw1Count + kw2Count;
+                matchData.location = firstLoc || '未知位置';
+            }
+        } catch (err) {
+            throw new Error(`${file.name}: ${err.message}`);
         }
 
         return matchData;

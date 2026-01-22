@@ -28,11 +28,23 @@ class WebFileSearchTool {
 
     handleFileSelection(event) {
         const files = Array.from(event.target.files);
+        const unsupportedFiles = [];
         // Filter by extensions
         this.selectedFiles = files.filter(file => {
             const ext = file.name.split('.').pop().toLowerCase();
-            return ['xlsx', 'xls', 'pdf'].includes(ext);
+            const isSupported = ['xlsx', 'xls', 'pdf'].includes(ext);
+            if (!isSupported) {
+                unsupportedFiles.push(file.name);
+            }
+            return isSupported;
         });
+
+        if (unsupportedFiles.length > 0) {
+            const maxFilesToShow = 3;
+            const fileList = unsupportedFiles.slice(0, maxFilesToShow).join(', ') + 
+                (unsupportedFiles.length > maxFilesToShow ? ` 等 ${unsupportedFiles.length} 個檔案` : '');
+            alert(`以下檔案類型不支援，已自動忽略：\n${fileList}\n\n本工具僅支援：Excel (.xlsx, .xls) 與 PDF (.pdf)`);
+        }
 
         document.getElementById('fileStats').innerText = `已選擇 ${this.selectedFiles.length} 個符合的檔案`;
     }

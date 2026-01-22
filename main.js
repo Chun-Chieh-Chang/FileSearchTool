@@ -12,6 +12,7 @@ class WebFileSearchTool {
         this.stopSearchFlag = false;
         this.results = [];
         this.resultFiles = [];
+        this.blobUrls = [];
         this.initEventListeners();
     }
 
@@ -21,12 +22,14 @@ class WebFileSearchTool {
         const startBtn = document.getElementById('startSearch');
         const stopBtn = document.getElementById('stopSearch');
         const saveBtn = document.getElementById('saveFiles');
+        const clearMemBtn = document.getElementById('clearMemory');
 
         folderInput.addEventListener('change', (e) => this.handleFileSelection(e));
         fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
         startBtn.addEventListener('click', () => this.startSearch());
         stopBtn.addEventListener('click', () => this.stopSearch());
         saveBtn.addEventListener('click', () => this.saveFilesToFolder());
+        clearMemBtn.addEventListener('click', () => this.clearMemory());
     }
 
     handleFileSelection(event) {
@@ -455,6 +458,68 @@ class WebFileSearchTool {
 
         tbody.appendChild(row);
         this.resultFiles.push(file);
+    }
+
+    clearMemory() {
+        const beforeCount = {
+            selectedFiles: this.selectedFiles.length,
+            resultFiles: this.resultFiles.length,
+            results: this.results.length,
+            blobUrls: this.blobUrls.length
+        };
+
+        this.selectedFiles = [];
+        this.resultFiles = [];
+        this.results = [];
+        this.errorFiles = [];
+
+        this.blobUrls.forEach(url => {
+            try {
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.warn('Error revoking URL:', e);
+            }
+        });
+        this.blobUrls = [];
+
+        document.getElementById('folderInput').value = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('keyword1').value = '';
+        document.getElementById('keyword2').value = '';
+        document.getElementById('fileStats').innerText = '未選擇任何檔案';
+
+        const tableBody = document.querySelector('#resultsTable tbody');
+        tableBody.innerHTML = '';
+
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('progressLabel').innerText = '進度: 0%';
+        document.getElementById('statusLabel').innerText = '記憶體已清空';
+        document.getElementById('saveFiles').disabled = true;
+
+        const afterCount = {
+            selectedFiles: this.selectedFiles.length,
+            resultFiles: this.resultFiles.length,
+            results: this.results.length,
+            blobUrls: this.blobUrls.length
+        };
+
+        console.log('Memory cleared:', { before: beforeCount, after: afterCount });
+
+        setTimeout(() => {
+            if (typeof gc === 'function') {
+                gc();
+                console.log('Garbage collection triggered');
+            }
+            if (window.gc) {
+                window.gc();
+            }
+        }, 100);
+
+        alert('已清空記憶體：\n\n' +
+            `已釋放 ${beforeCount.selectedFiles} 個選擇的檔案\n` +
+            `已釋放 ${beforeCount.resultFiles} 個結果檔案\n` +
+            `已釋放 ${beforeCount.blobUrls} 個 Blob URLs\n` +
+            `已清空搜尋結果`);
     }
 }
 

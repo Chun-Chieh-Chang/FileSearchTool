@@ -336,6 +336,18 @@ main {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.39);
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #d97706;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+}
+
 .btn-secondary {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);

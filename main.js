@@ -35,10 +35,9 @@ class WebFileSearchTool {
     handleFileSelection(event) {
         const files = Array.from(event.target.files);
         const unsupportedFiles = [];
-        // Filter by extensions
         this.selectedFiles = files.filter(file => {
             const ext = file.name.split('.').pop().toLowerCase();
-            const isSupported = ['xlsx', 'xls', 'pdf'].includes(ext);
+            const isSupported = ['xlsx', 'xls', 'pdf', 'docx'].includes(ext);
             if (!isSupported) {
                 unsupportedFiles.push(file.name);
             }
@@ -47,9 +46,9 @@ class WebFileSearchTool {
 
         if (unsupportedFiles.length > 0) {
             const maxFilesToShow = 3;
-            const fileList = unsupportedFiles.slice(0, maxFilesToShow).join(', ') + 
+            const fileList = unsupportedFiles.slice(0, maxFilesToShow).join(', ') +
                 (unsupportedFiles.length > maxFilesToShow ? ` 等 ${unsupportedFiles.length} 個檔案` : '');
-            alert(`以下檔案類型不支援，已自動忽略：\n${fileList}\n\n本工具僅支援：Excel (.xlsx, .xls) 與 PDF (.pdf)`);
+            alert(`以下檔案類型不支援，已自動忽略：\n${fileList}\n\n本工具僅支援：Excel (.xlsx, .xls)、PDF (.pdf) 與 Word (.docx)`);
         }
 
         document.getElementById('fileStats').innerText = `已選擇 ${this.selectedFiles.length} 個符合的檔案`;
@@ -103,7 +102,9 @@ class WebFileSearchTool {
             const ext = file.name.split('.').pop().toLowerCase();
             if (typeFilter === 'Excel') return ['xlsx', 'xls'].includes(ext);
             if (typeFilter === 'PDF') return ext === 'pdf';
-            return ['xlsx', 'xls', 'pdf'].includes(ext);
+            if (typeFilter === 'Word') return ext === 'docx';
+            if (typeFilter === 'ExcelAndPDF') return ['xlsx', 'xls', 'pdf'].includes(ext);
+            return ['xlsx', 'xls', 'pdf', 'docx'].includes(ext);
         });
 
         const validTotalFiles = filesToProcess.length;
@@ -397,6 +398,67 @@ class WebFileSearchTool {
                         pdf.destroy();
                     } catch (e) {
                         console.warn('Error destroying PDF:', e);
+                    }
+                }
+
+                matchData.isMatch = this.checkLogic(kw1Found, kw2Found, kw2, logic);
+                matchData.totalCount = kw1Count + kw2Count;
+                matchData.location = firstLoc || '未知位置';
+
+            } else if (ext === 'docx') {
+                matchData.type = 'Word';
+
+                if (file.size > 50 * 1024 * 1024) {
+                    throw new Error('檔案過大 (超過 50MB)，無法處理');
+                }
+
+                let arrayBuffer;
+                try {
+                    arrayBuffer = await file.arrayBuffer();
+                } catch (e) {
+                    throw new Error('無法讀取檔案內容');
+                }
+
+                let result;
+                try {
+                    result = await mammoth.extractRawText({ arrayBuffer });
+                } catch (e) {
+                    throw new Error('Word 檔案格式錯誤或已損壞');
+                }
+
+                const docText = result.value;
+
+                let kw1Found = false;
+                let kw2Found = false;
+                let kw1Count = 0;
+                let kw2Count = 0;
+                let firstLoc = '';
+
+                const m1 = this.countMatches(docText, kw1, wholeWord, caseSensitive);
+                if (m1 > 0) {
+                    kw1Found = true;
+                    kw1Count += m1;
+                    firstLoc = '文件內容中';
+
+                    const kw1Index = docText.toLowerCase().indexOf(kw1.toLowerCase());
+                    if (kw1Index !== -1) {
+                        const wordPos = Math.floor(kw1Index / 50);
+                        firstLoc = `段落約位置 ${wordPos + 1}`;
+                    }
+                }
+
+                if (kw2) {
+                    const m2 = this.countMatches(docText, kw2, wholeWord, caseSensitive);
+                    if (m2 > 0) {
+                        kw2Found = true;
+                        kw2Count += m2;
+                        if (!firstLoc) {
+                            const kw2Index = docText.toLowerCase().indexOf(kw2.toLowerCase());
+                            if (kw2Index !== -1) {
+                                const wordPos = Math.floor(kw2Index / 50);
+                                firstLoc = `段落約位置 ${wordPos + 1}`;
+                            }
+                        }
                     }
                 }
 

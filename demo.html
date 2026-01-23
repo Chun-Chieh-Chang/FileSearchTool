@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>檔案搜尋工具 - 複選框功能展示</title>
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f8fafc;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .demo-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 800px;
+            padding: 2.5rem;
+            margin: 0 auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .feature-section {
+            margin-bottom: 2rem;
+        }
+        .feature-section h2 {
+            color: #38bdf8;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        .before-after {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .before, .after {
+            padding: 1.5rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .before h3 {
+            color: #f87171;
+            margin-bottom: 0.5rem;
+        }
+        .after h3 {
+            color: #34d399;
+            margin-bottom: 0.5rem;
+        }
+        .demo-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 1rem;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            position: relative;
+            padding-left: 28px;
+            user-select: none;
+        }
+        .checkbox-container input {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .check-mark {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            height: 18px;
+            width: 18px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        .checkbox-container:hover input~.check-mark {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .checkbox-container input:checked~.check-mark {
+            background-color: #0ea5e9;
+            border-color: #0ea5e9;
+        }
+        .checkbox-container input:checked~.check-mark:after {
+            content: "";
+            position: absolute;
+            display: block;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .highlight {
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+        }
+        .benefit-list {
+            list-style: none;
+            padding: 0;
+        }
+        .benefit-list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .benefit-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #34d399;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <header>
+            <h1>🔧 檔案搜尋工具 v1.6.1 - 複選框升級</h1>
+            <p style="color: #94a3b8; margin-bottom: 2rem;">將檔案類型選擇從下拉選單改為更靈活的複選框介面</p>
+        </header>
+
+        <div class="feature-section">
+            <h2>🔄 功能變更</h2>
+            
+            <div class="before-after">
+                <div class="before">
+                    <h3>❌ 舊版本 (下拉選單)</h3>
+                    <p>只能選擇一種預設的組合：</p>
+                    <div class="code-block">
+&lt;select id="typeFilter"&gt;
+    &lt;option value="All"&gt;全部&lt;/option&gt;
+    &lt;option value="Excel"&gt;僅 Excel&lt;/option&gt;
+    &lt;option value="PDF"&gt;僅 PDF&lt;/option&gt;
+    &lt;option value="Word"&gt;僅 Word&lt;/option&gt;
+    &lt;option value="ExcelAndPDF"&gt;Excel 與 PDF&lt;/option&gt;
+&lt;/select&gt;
+                    </div>
+                </div>
+                
+                <div class="after">
+                    <h3>✅ 新版本 (複選框)</h3>
+                    <p>可同時選擇多種檔案類型：</p>
+                    <div class="demo-checkboxes">
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="Excel" checked>
+                            <span class="check-mark"></span>
+                            Excel (.xlsx, .xls)
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="PDF" checked>
+                            <span class="check-mark"></span>
+                            PDF (.pdf)
+                        </label>
+                        <label class="checkbox-container">
+                            <input type="checkbox" value="Word" checked>
+                            <span class="check-mark"></span>
+                            Word (.docx)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🎯 主要優勢</h2>
+            <div class="highlight">
+                <ul class="benefit-list">
+                    <li>更高的彈性 - 可同時搜尋多種檔案類型</li>
+                    <li>更直觀的介面 - 複選框比下拉選單更清晰</li>
+                    <li>自定義組合 - 可任意組合想要搜尋的檔案類型</li>
+                    <li>預設全選 - 預設選取所有檔案類型，方便使用</li>
+                    <li>驗證機制 - 確保至少選取一種檔案類型</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>🛠️ 技術實作</h2>
+            <div class="code-block">
+// HTML 結構
+&lt;div class="checkbox-group"&gt;
+    &lt;label class="checkbox-container"&gt;
+        &lt;input type="checkbox" id="typeExcel" value="Excel" checked&gt;
+        &lt;span class="check-mark"&gt;&lt;/span&gt;
+        Excel (.xlsx, .xls)
+    &lt;/label&gt;
+    &lt;label class="checkbox-container"&gt;
+        &lt;input type="checkbox" id="typePDF" value="PDF" checked&gt;
+        &lt;span class="check-mark"&gt;&lt;/span&gt;
+        PDF (.pdf)
+    &lt;/label&gt;
+    &lt;label class="checkbox-container"&gt;
+        &lt;input type="checkbox" id="typeWord" value="Word" checked&gt;
+        &lt;span class="check-mark"&gt;&lt;/span&gt;
+        Word (.docx)
+    &lt;/label&gt;
+&lt;/div&gt;
+
+// JavaScript 邏輯
+const typeExcel = document.getElementById('typeExcel').checked;
+const typePDF = document.getElementById('typePDF').checked;
+const typeWord = document.getElementById('typeWord').checked;
+
+// 過濾檔案
+const filesToProcess = this.selectedFiles.filter(file => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (typeExcel && ['xlsx', 'xls'].includes(ext)) return true;
+    if (typePDF && ext === 'pdf') return true;
+    if (typeWord && ext === 'docx') return true;
+    return false;
+});
+
+// 驗證至少選取一種類型
+if (!typeExcel && !typePDF && !typeWord) {
+    alert('請至少選取一種檔案類型');
+    return;
+}
+            </div>
+        </div>
+
+        <div class="feature-section">
+            <h2>📝 使用說明</h2>
+            <div class="highlight">
+                <p><strong>步驟 1：</strong> 選擇要搜尋的檔案類型（可複選）</p>
+                <p><strong>步驟 2：</strong> 輸入關鍵字和搜尋條件</p>
+                <p><strong>步驟 3：</strong> 開始搜尋，系統只會處理選取的檔案類型</p>
+                <p><strong>提示：</strong> 預設已勾選所有檔案類型，如需特定搜尋可取消勾選</p>
+            </div>
+        </div>
+
+        <footer style="text-align: center; margin-top: 2rem; color: #94a3b8;">
+            <p>檔案內容深度搜尋工具 v1.6.1 - 更好的使用者體驗</p>
+            <p>© 2025 Wesley Chang. All rights reserved.</p>
+        </footer>
+    </div>
+</body>
+</html>

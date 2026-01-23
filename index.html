@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>檔案內容深度搜尋工具 v1.6.0</title>
+    <title>檔案內容深度搜尋工具 v1.6.1</title>
     <!-- SEO -->
     <meta name="description" content="高品質檔案內容深度搜尋工具，支援 Excel (.xlsx, .xls)、PDF 及 Word (.docx) 檔案，支援 AND/OR 關鍵字邏輯與多種搜尋選項。">
     <!-- Google Fonts -->
@@ -20,7 +20,7 @@
         <header>
             <div class="logo-area">
                 <h1>檔案內容深度搜尋工具</h1>
-                <span class="version-tag">v1.6.0</span>
+                <span class="version-tag">v1.6.1</span>
             </div>
             <div class="author-info">
                 <img src="author_avatar.png" alt="Author" class="avatar" id="authorAvatar">
@@ -102,13 +102,23 @@
                     </div>
                     <div class="type-filter">
                         <label>檔案類型:</label>
-                        <select id="typeFilter">
-                            <option value="All">全部 (Excel, PDF, Word)</option>
-                            <option value="Excel">僅 Excel (.xlsx, .xls)</option>
-                            <option value="PDF">僅 PDF (.pdf)</option>
-                            <option value="Word">僅 Word (.docx)</option>
-                            <option value="ExcelAndPDF">Excel 與 PDF</option>
-                        </select>
+                        <div class="checkbox-group">
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="typeExcel" value="Excel" checked>
+                                <span class="check-mark"></span>
+                                Excel (.xlsx, .xls)
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="typePDF" value="PDF" checked>
+                                <span class="check-mark"></span>
+                                PDF (.pdf)
+                            </label>
+                            <label class="checkbox-container">
+                                <input type="checkbox" id="typeWord" value="Word" checked>
+                                <span class="check-mark"></span>
+                                Word (.docx)
+                            </label>
+                        </div>
                     </div>
                 </div>
             </section>

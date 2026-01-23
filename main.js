@@ -1,5 +1,5 @@
 /**
- * FileSearchTool v1.6.0 - Web Version
+ * FileSearchTool v1.6.1 - Web Version
  * Core Logic for Searching Excel and PDF files
  */
 
@@ -60,7 +60,11 @@ class WebFileSearchTool {
         const logic = document.querySelector('input[name="keywordLogic"]:checked').value;
         const wholeWord = document.getElementById('wholeWord').checked;
         const caseSensitive = document.getElementById('caseSensitive').checked;
-        const typeFilter = document.getElementById('typeFilter').value;
+        
+        // 取得檔案類型複選框的選取狀態
+        const typeExcel = document.getElementById('typeExcel').checked;
+        const typePDF = document.getElementById('typePDF').checked;
+        const typeWord = document.getElementById('typeWord').checked;
 
         if (!kw1) {
             alert('請至少輸入關鍵字 1');
@@ -69,6 +73,16 @@ class WebFileSearchTool {
 
         if (this.selectedFiles.length === 0) {
             alert('請先選擇資料夾或檔案');
+            return;
+        }
+
+        // 檢查是否至少選取了一個檔案類型
+        const typeExcel = document.getElementById('typeExcel').checked;
+        const typePDF = document.getElementById('typePDF').checked;
+        const typeWord = document.getElementById('typeWord').checked;
+        
+        if (!typeExcel && !typePDF && !typeWord) {
+            alert('請至少選取一種檔案類型');
             return;
         }
 
@@ -100,11 +114,14 @@ class WebFileSearchTool {
         const CONCURRENCY = 4;
         const filesToProcess = this.selectedFiles.filter(file => {
             const ext = file.name.split('.').pop().toLowerCase();
-            if (typeFilter === 'Excel') return ['xlsx', 'xls'].includes(ext);
-            if (typeFilter === 'PDF') return ext === 'pdf';
-            if (typeFilter === 'Word') return ext === 'docx';
-            if (typeFilter === 'ExcelAndPDF') return ['xlsx', 'xls', 'pdf'].includes(ext);
-            return ['xlsx', 'xls', 'pdf', 'docx'].includes(ext);
+            
+            // 根據複選框的選取狀態過濾檔案
+            if (typeExcel && ['xlsx', 'xls'].includes(ext)) return true;
+            if (typePDF && ext === 'pdf') return true;
+            if (typeWord && ext === 'docx') return true;
+            
+            // 如果沒有選取任何類型，則不處理任何檔案
+            return false;
         });
 
         const validTotalFiles = filesToProcess.length;
@@ -587,6 +604,12 @@ class WebFileSearchTool {
         document.getElementById('fileInput').value = '';
         document.getElementById('keyword1').value = '';
         document.getElementById('keyword2').value = '';
+        
+        // 重置檔案類型複選框
+        document.getElementById('typeExcel').checked = true;
+        document.getElementById('typePDF').checked = true;
+        document.getElementById('typeWord').checked = true;
+        
         document.getElementById('fileStats').innerText = '未選擇任何檔案';
 
         const tableBody = document.querySelector('#resultsTable tbody');

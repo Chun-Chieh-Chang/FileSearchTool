@@ -285,6 +285,31 @@ main {
     border-radius: 4px;
 }
 
+.checkbox-container input:checked~.check-mark {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-container input:checked~.check-mark:after {
+    content: "";
+    position: absolute;
+    display: block;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
 .radio-container:hover input~.radio-mark,
 .checkbox-container:hover input~.check-mark {
     background-color: rgba(255, 255, 255, 0.2);

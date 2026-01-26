@@ -258,10 +258,42 @@ class FileSearchApp:
         self.status_label.pack(side=tk.BOTTOM, fill=tk.X, padx=0, pady=0)
 
     def browse_folder(self):
-        foldername = filedialog.askdirectory()
-        if foldername:
-            self.folder_path.set(foldername)
-            self.update_status(f"已選擇資料夾: {foldername}")
+        try:
+            # 添加初始目錄參數以提高穩定性
+            initial_dir = self.folder_path.get() if self.folder_path.get() and os.path.exists(self.folder_path.get()) else None
+            
+            foldername = filedialog.askdirectory(
+                title="選擇要搜尋的資料夾",
+                initialdir=initial_dir,
+                mustexist=True
+            )
+            
+            if foldername:
+                # 驗證資料夾存在且可訪問
+                if os.path.exists(foldername) and os.path.isdir(foldername):
+                    try:
+                        # 測試權限 - 嘗試列出檔案
+                        os.listdir(foldername)
+                        self.folder_path.set(foldername)
+                        self.update_status(f"已選擇資料夾: {foldername}")
+                        print(f"成功選擇資料夾: {foldername}")
+                    except PermissionError:
+                        messagebox.showerror("權限錯誤", f"無法訪問資料夾:\n{foldername}\n\n請檢查權限設定。")
+                        self.update_status("選擇資料夾失敗：權限不足")
+                    except Exception as e:
+                        messagebox.showerror("訪問錯誤", f"訪問資料夾時發生錯誤:\n{foldername}\n\n錯誤: {e}")
+                        self.update_status("選擇資料夾失敗")
+                else:
+                    messagebox.showerror("路徑錯誤", f"選擇的路徑不是有效資料夾:\n{foldername}")
+                    self.update_status("選擇資料夾失敗：無效路徑")
+            else:
+                self.update_status("已取消選擇資料夾")
+                
+        except Exception as e:
+            error_msg = f"開啟資料夾選擇對話框時發生錯誤: {e}"
+            messagebox.showerror("系統錯誤", error_msg)
+            self.update_status("瀏覽資料夾功能異常")
+            print(error_msg)
 
     def update_status(self, message):
         self.status_label.config(text=f"狀態：{message}")

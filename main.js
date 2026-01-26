@@ -76,11 +76,6 @@ class WebFileSearchTool {
             return;
         }
 
-        // 檢查是否至少選取了一個檔案類型
-        const typeExcel = document.getElementById('typeExcel').checked;
-        const typePDF = document.getElementById('typePDF').checked;
-        const typeWord = document.getElementById('typeWord').checked;
-        
         if (!typeExcel && !typePDF && !typeWord) {
             alert('請至少選取一種檔案類型');
             return;

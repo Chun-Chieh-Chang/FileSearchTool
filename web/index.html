@@ -1,20 +1,26 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>檔案內容深度搜尋工具 v1.6.1</title>
     <!-- SEO -->
-    <meta name="description" content="高品質檔案內容深度搜尋工具，支援 Excel (.xlsx, .xls)、PDF 及 Word (.docx) 檔案，支援 AND/OR 關鍵字邏輯與多種搜尋選項。">
+    <meta name="description"
+        content="高品質檔案內容深度搜尋工具，支援 Excel (.xlsx, .xls)、PDF 及 Word (.docx) 檔案，支援 AND/OR 關鍵字邏輯與多種搜尋選項。">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="icon" href="assets/icon.ico" type="image/x-icon">
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/style.css">
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
+
 <body>
     <div id="app" class="glass-container">
         <header>
@@ -23,7 +29,7 @@
                 <span class="version-tag">v1.6.1</span>
             </div>
             <div class="author-info">
-                <img src="author_avatar.png" alt="Author" class="avatar" id="authorAvatar">
+                <img src="assets/author_avatar.png" alt="Author" class="avatar" id="authorAvatar">
                 <div class="author-details">
                     <p class="author-name">Wesley Chang</p>
                     <p class="publish-date">May 2025</p>
@@ -49,7 +55,7 @@
                             <i class="icon-folder"></i> 選擇資料夾搜尋
                         </label>
                         <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
-                        
+
                         <label for="fileInput" class="custom-file-upload secondary">
                             <i class="icon-file"></i> 選擇特定檔案
                         </label>
@@ -170,6 +176,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="main.js"></script>
+    <script src="assets/main.js"></script>
 </body>
+
 </html>

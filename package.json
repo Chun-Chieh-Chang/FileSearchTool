@@ -1,0 +1,12 @@
+{
+  "name": "file-search-tool",
+  "version": "1.6.1",
+  "description": "High-quality file content search tool supporting Excel, PDF, and Word.",
+  "main": "web/index.html",
+  "scripts": {
+    "start": "serve web",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Wesley Chang",
+  "license": "MIT"
+}

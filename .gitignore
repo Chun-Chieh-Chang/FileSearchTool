@@ -1,20 +1,37 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.spec
+.venv/
+venv/
+ENV/
 
 # Build & Dist
 build/
 dist/
+bin/
+obj/
 
-# Logs
-*.log
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDEs
-.vscode/
-.idea/
+# Project Specific
+legacy/
+tests/
+# Note: Keeping web/ as the source, docs/ as documentation

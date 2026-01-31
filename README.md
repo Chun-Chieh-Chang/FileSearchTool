@@ -1,36 +1,36 @@
-# 檔案內容深度搜尋工具 v1.6.0 (File Search Tool)
+# 檔案內容深度搜尋工具 (File Search Tool)
 
-![Web Version](https://img.shields.io/badge/Version-1.6.0-blue)
+![Web Version](https://img.shields.io/badge/Version-1.6.1-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Platform](https://img.shields.io/badge/Platform-Web%20%2F%20Windows-lightgrey)
+![Platform](https://img.shields.io/badge/Platform-Web-lightgrey)
+![Deployment](https://img.shields.io/github/actions/workflow/status/Chun-Chieh-Chang/FileSearchTool/deploy.yml?branch=main)
 
-這是一個強大的檔案內容深度搜尋工具，支援 Excel (.xlsx, .xls) 及 PDF 檔案內容搜尋。本專案包含 **Python 桌面版** 與 **網頁版 (Web Version)**。
+這是一個高品質的檔案內容深度搜尋工具，支援 Excel (.xlsx, .xls)、PDF 及 Word (.docx) 檔案內容搜尋。
 
 ## 🌐 網頁版特色 (GitHub Pages)
 您可以直接在瀏覽器中使用此工具，無需安裝任何環境：
-- **無需上傳**: 檔案在您的本地端進行處理，保護隱私。
-- **支援格式**: Excel (.xlsx, .xls) 與 PDF。
+- **100% 隱私保護**: 所有檔案處理皆在您的瀏覽器本地完成，不會上傳至任何伺服器。
+- **支援格式**: Excel (.xlsx, .xls)、PDF (.pdf) 及 Word (.docx)。
 - **進階搜尋**: 支援 `AND` (同時包含) 與 `OR` (包含任一) 關鍵字邏輯。
 - **搜尋選項**: 全詞匹配、區分大小寫、檔案類型篩選。
-- **直覺介面**: 採用現代化的 Glassmorphism 設計，操作流暢。
+- **現代化介面**: 採用 Glassmorphism 設計，優雅且直覺。
 
-## 💻 Python 桌面版開發
-如果您需要使用 Python 桌面版，請確保已安裝以下套件：
-```bash
-pip install openpyxl xlrd PyMuPDF Pillow
-```
-執行腳本：
-```bash
-python FileSearchTool.py
-```
+## 📁 專案結構 (MECE 原則)
+專案採用 MECE (Mutually Exclusive, Collectively Exhaustive) 原則進行整理：
+
+- `/web`: 網頁版應用程式源始碼 (HTML, CSS, JS, Assets)。
+- `/docs`: 專案相關文件、修訂計畫及腳本。
+- `/tests`: 測試用檔案與展示頁面。
+- `/legacy`: 舊版或不再直接使用的設定檔 (如 .spec)。
+- `/.github`: GitHub Actions 自動部署工作流。
 
 ## 🚀 部署說明
-本專案已配置 GitHub Actions。當您將代碼推送到 GitHub 後，它將自動部署至 GitHub Pages。
+本專案已配置 **GitHub Actions** 自動部署。
+當代碼推送到 `main` 分支時，會自動觸發部署至 GitHub Pages。
 
-### 部署步驟：
-1. 在 GitHub 上創建一個新的儲存庫。
-2. 將此本地資料夾關聯到您的 GitHub 儲存庫。
-3. 執行 `git push` 後，前往 Settings > Pages 將 Branch 設定為 `gh-pages` (如果使用 Actions 部署，則選擇 `GitHub Actions`)。
+**主要設定檔：**
+- `.github/workflows/deploy.yml`: 定義部署至 GitHub Pages 的流程。
+- `package.json`: 專案定義與 npm 腳本。
 
 ## 👤 作者資訊
 - **作者**: Wesley Chang
